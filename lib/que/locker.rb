@@ -174,7 +174,9 @@ module Que
           end
         end
 
+      puts "connection_args: #{connection_args}"
       @connection = Que::Connection.wrap(PG::Connection.open(connection_args))
+      puts "@connection: #{@connection}"
 
       @thread =
         Thread.new do

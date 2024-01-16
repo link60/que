@@ -194,10 +194,15 @@ module Que
       def setup(connection)
         connection.execute <<-SQL
           -- Temporary composite type we need for our queries to work.
-          CREATE TYPE pg_temp.que_query_result AS (
-            locked boolean,
-            remaining_priorities jsonb
-          );
+          DO $$
+          BEGIN
+              IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'que_query_result') THEN
+                  CREATE TYPE pg_temp.que_query_result AS (
+                    locked boolean,
+                    remaining_priorities jsonb
+                  );
+              END IF;
+          END$$;
 
           CREATE FUNCTION pg_temp.lock_and_update_priorities(priorities jsonb, job que_jobs)
           RETURNS pg_temp.que_query_result

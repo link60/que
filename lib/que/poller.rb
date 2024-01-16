@@ -194,17 +194,17 @@ module Que
       def setup(connection)
         connection.execute <<-SQL
           -- Temporary composite type we need for our queries to work.
-          DO $$
-          BEGIN
-              IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'que_query_result') THEN
-                  CREATE TYPE pg_temp.que_query_result AS (
-                    locked boolean,
-                    remaining_priorities jsonb
-                  );
-              END IF;
-          END$$;
 
-          CREATE FUNCTION pg_temp.lock_and_update_priorities(priorities jsonb, job que_jobs)
+          DO $$ BEGIN
+              CREATE TYPE pg_temp.que_query_result AS (
+                locked boolean,
+                remaining_priorities jsonb
+              );
+          EXCEPTION
+              WHEN duplicate_object THEN null;
+          END $$;
+
+          CREATE OR REPLACE FUNCTION pg_temp.lock_and_update_priorities(priorities jsonb, job que_jobs)
           RETURNS pg_temp.que_query_result
           AS $$
             WITH
@@ -252,7 +252,7 @@ module Que
           STABLE
           LANGUAGE SQL;
 
-          CREATE FUNCTION pg_temp.que_highest_remaining_priority(priorities jsonb) RETURNS smallint AS $$
+          CREATE OR REPLACE FUNCTION pg_temp.que_highest_remaining_priority(priorities jsonb) RETURNS smallint AS $$
             SELECT max(key::smallint) FROM jsonb_each(priorities)
           $$
           STABLE
